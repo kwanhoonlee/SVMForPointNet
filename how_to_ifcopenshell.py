@@ -22,9 +22,7 @@ np.warnings.filterwarnings('ignore')
 
 
 def get_features(ifctype, path):
-    # input (ifctype) : 추출하고 싶은 ifc객체 타입 e.g. ifcwallstandardcase, ifcdoor...
-    # input (path) : ifc파일의 경로 
-    # output : 추출한 ifc 객체들. pandas dataframe에 들어가있음
+
     
     settings = ifcopenshell.geom.settings()
     settings.set(settings.USE_PYTHON_OPENCASCADE, True)
@@ -125,7 +123,7 @@ def get_features(ifctype, path):
     frame = pd.DataFrame(data)
     return frame
 
-duplex_window = get_features('ifcwindow', r"C:\Users\User\PycharmProjects\BIM\ifc\Duplex_A_20110907_optimized.ifc")
+duplex_window = get_features('ifcwindow', r"./ifc/SVM/KBIMS1.ifc")
 
 
 def get_building_ifc(path):
@@ -141,4 +139,4 @@ def get_building_ifc(path):
     return df
 
 
-duplex_all = get_building_ifc(r"C:\Users\User\PycharmProjects\BIM\ifc\Duplex_A_20110907_optimized.ifc")
+duplex_all = get_building_ifc(r"./ifc/SVM/KBIMS1.ifc")
