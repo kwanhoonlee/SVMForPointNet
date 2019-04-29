@@ -7,8 +7,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import confusion_matrix
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.metrics import confusion_matrix, precision_recall_curve, average_precision_score, roc_curve, auc
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn import svm
@@ -124,3 +124,103 @@ class bim_svm():
         plt.savefig(self.config['plt_path'] + title + "_"+ nowtxt + ".png", dpi=600)
         plt.clf()
         plt.close()
+
+
+    def getPrecision_Recall(self, testY, scoreY):
+        precision = dict()
+        recall = dict()
+        avg_precision = dict()
+
+        for i in range(testY.shape[1]):
+            precision[i], recall[i], _ = precision_recall_curve(testY[:, i], scoreY[:, i])
+            avg_precision[i] = average_precision_score(testY[:, i], scoreY[:, i])
+
+        return precision, recall, avg_precision
+
+    def getMicroPrecision_Recall(self, testY, scoreY):
+        p, r, ap = self.getPrecision_Recall(testY, scoreY)
+        p["micro"], r["micro"], _ = precision_recall_curve(testY.ravel(), scoreY.ravel())
+        ap["micro"] = average_precision_score(testY, scoreY, average="micro")
+
+        print('Average precision score, micro-averaged over all classes: {0:0.2f}'
+              .format(ap["micro"]))
+
+        return p, r, ap
+
+    def transform_using_onehotencoder(self, Y):
+        encoder = OneHotEncoder()
+        encoder.fit(Y)
+        encoded_Y = encoder.transform(Y)
+
+        return encoder, encoded_Y.toarray()
+
+    def plot_precision_recall_curve(self, testY, scoreY, classes):
+        plt.clf()
+        p, r, ap = self.getMicroPrecision_Recall(testY, scoreY)
+        plt.figure(figsize=(7,8))
+        f_scores = np.linspace(0.2, 0.8, num=4)
+        lines = []
+        labels = []
+
+        l, = plt.plot(r['micro'], p['micro'], color='gold', lw=2)
+        lines.append(l)
+        labels.append('Micro-Average Precision-Recall (area = {0:0.2f})'
+                      ''.format(ap['micro']))
+
+        linestyles = itertools.cycle(['-', '--', '-.', ':'])
+        colors = ['tomato', 'darkorange', 'green', 'blue',] #'purple','red', 'grey', 'yellow'
+        for i, line in zip(range(len(classes)), linestyles):
+            l, = plt.plot(r[i], p[i], color=colors[i], linestyle=line, lw=2)
+
+            lines.append(l)
+            labels.append('{0} (area = {1:0.2f})'
+                          ''.format(classes[i], ap[i]))
+
+        fig = plt.gcf()
+        fig.subplots_adjust(bottom=0.25)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.title('Precision-Recall Curve (Rel O) ')
+        plt.legend(lines, labels, loc=(0, -.38), prop=dict(size=14))
+        nowtxt = datetime.now().strftime('%m-%d_%H_%M')
+
+        plt.savefig(self.config['plt_precision_recall_path'] +"Precision_Recall_Curve_"+ nowtxt + ".png", dpi=600 )
+        # plt.show()
+
+        return p, r, ap
+
+    def plot_roc_curve(self, testY, scoreY, classes):
+        plt.clf()
+        fpr = dict()
+        tpr = dict()
+        roc_auc = dict()
+
+        for i in range(testY.shape[1]) :
+            fpr[i], tpr[i], _ = roc_curve(testY[:, i ], scoreY[:, i])
+            roc_auc[i] = auc(fpr[i], tpr[i])
+
+
+        linestyles = itertools.cycle(['-', '--', '-.', ':'])
+
+        colors = ['tomato', 'darkorange', 'green', 'blue',]
+        for i, line in zip(range(testY.shape[1]), linestyles):
+            plt.plot(fpr[i], tpr[i], color=colors[i], linestyle=line, label=' {0} (area = {1:0.2f})'
+                     ''.format(classes[i], roc_auc[i]))
+
+        plt.plot([0, 1], [0, 1], 'k--', lw=2)
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Multi-Class SVM Result (rel O)')
+        plt.legend(loc="lower right")
+        plt.grid()
+        # plt.show()
+        nowtxt = datetime.now().strftime('%m-%d_%H_%M')
+
+
+        plt.savefig(self.config['plt_roc_curve_path'] +"ROC Cureve "+ nowtxt + ".png", dpi=600 )
+
+        return fpr, tpr, roc_auc
